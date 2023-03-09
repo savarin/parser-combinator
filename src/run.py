@@ -44,6 +44,19 @@ def char(value: str) -> PairCallable:
     return literal(value)(shift)
 
 
+def fmap(func: Callable[[str], str]) -> Callable[[PairCallable], PairCallable]:
+    def f(parser: PairCallable) -> PairCallable:
+        def g(source: str) -> Pair:
+            def h(result: Pair) -> Pair:
+                return result and (func(result[0]), result[1])
+
+            return h(parser(source))
+
+        return g
+
+    return f
+
+
 def test_run() -> None:
     assert shift("bar") == ("b", "ar")
     assert shift("ar") == ("a", "r")
@@ -66,6 +79,12 @@ def test_run() -> None:
 
     dot = char(".")
     assert dot(".456") == (".", "456")
+
+    ndigit = fmap(int)(digit)  # type: ignore
+    tenx = fmap(lambda x: 10 * x)
+    assert ndigit("456") == (4, "56")
+    assert tenx(ndigit)("456") == (40, "56")
+    assert tenx(digit)("456") == ("4444444444", "56")
 
 
 if __name__ == "__main__":
