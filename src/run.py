@@ -78,6 +78,24 @@ def one_or_more(parser: Callable[[str], Pair]) -> Callable[[str], PairList]:
     return parse
 
 
+def sequence(*parsers: Callable[[str], Pair]) -> Callable[[str], PairList]:
+    def parse(source: str) -> PairList:
+        result: List[str] = []
+
+        for parser in parsers:
+            pair = parser(source)
+
+            if not pair:
+                return False
+
+            value, source = pair
+            result.append(value)
+
+        return (result, source)
+
+    return parse
+
+
 def test_run() -> None:
     assert shift("bar") == ("b", "ar")
     assert shift("ar") == ("a", "r")
@@ -117,6 +135,18 @@ def test_run() -> None:
 
     value = fmap(int)(digits)  # type: ignore
     assert value("456") == (456, "")
+
+    assert sequence(letter, digit, letter)("a4x") == (["a", "4", "x"], "")
+    assert sequence(letter, digit, letter)("abc") is False
+    assert sequence(letter, fmap("".join)(one_or_more(digit)))("x12345") == (  # type: ignore
+        ["x", "12345"],
+        "",
+    )
+
+    left = lambda p1, p2: fmap(lambda p: p[0])(sequence(p1, p2))  # type: ignore
+    right = lambda p1, p2: fmap(lambda p: p[1])(sequence(p1, p2))  # type: ignore
+    assert left(letter, digit)("a4") == ("a", "")
+    assert right(letter, digit)("a4") == ("4", "")
 
 
 if __name__ == "__main__":
