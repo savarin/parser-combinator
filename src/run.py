@@ -1,8 +1,11 @@
-from typing import Callable, Literal, Tuple, Union
+from typing import Callable, List, Literal, Tuple, Union
 
 
 Pair = Union[Tuple[str, str], Literal[False]]
 PairCallable = Callable[[str], Pair]
+
+PairList = Union[Tuple[List[str], str], Literal[False]]
+PairListCallable = Callable[[str], PairList]
 
 
 def shift(source: str) -> Pair:
@@ -57,6 +60,24 @@ def fmap(func: Callable[[str], str]) -> Callable[[PairCallable], PairCallable]:
     return f
 
 
+def one_or_more(parser: Callable[[str], Pair]) -> Callable[[str], PairList]:
+    def parse(source: str) -> PairList:
+        result: List[str] = []
+
+        while True:
+            pair = parser(source)
+
+            if not pair:
+                break
+
+            value, source = pair
+            result.append(value)
+
+        return bool(result) and (result, source)
+
+    return parse
+
+
 def test_run() -> None:
     assert shift("bar") == ("b", "ar")
     assert shift("ar") == ("a", "r")
@@ -85,6 +106,17 @@ def test_run() -> None:
     assert ndigit("456") == (4, "56")
     assert tenx(ndigit)("456") == (40, "56")
     assert tenx(digit)("456") == ("4444444444", "56")
+
+    digits = one_or_more(digit)
+    assert digits("456") == (["4", "5", "6"], "")
+    assert digits("1abc") == (["1"], "abc")
+    assert digits("abc") == False
+
+    digits = fmap("".join)(one_or_more(digit))  # type: ignore
+    assert digits("456") == ("456", "")
+
+    value = fmap(int)(digits)  # type: ignore
+    assert value("456") == (456, "")
 
 
 if __name__ == "__main__":
