@@ -40,6 +40,10 @@ def member_of(values: str) -> Callable[[PairCallable], PairCallable]:
     return sieve(f)
 
 
+def char(value: str) -> PairCallable:
+    return literal(value)(shift)
+
+
 def test_run() -> None:
     assert shift("bar") == ("b", "ar")
     assert shift("ar") == ("a", "r")
@@ -49,14 +53,19 @@ def test_run() -> None:
     assert nothing("bar") == (None, "bar")
 
     digit = sieve(str.isdigit)(shift)
+    letter = sieve(str.isalpha)(shift)
     assert digit("456") == ("4", "56")
-    assert sieve(str.isalpha)(shift)("456") is False
+    assert letter("456") is False
 
-    assert literal(".")(shift)(".456") == (".", "456")
-    assert literal(".")(shift)("45.6") is False
+    dot = literal(".")(shift)
+    even = member_of("02468")(digit)
+    assert dot(".456") == (".", "456")
+    assert dot("45.6") is False
+    assert even("456") == ("4", "56")
+    assert even("345") is False
 
-    assert member_of("02468")(digit)("456") == ("4", "56")
-    assert member_of("02468")(digit)("345") is False
+    dot = char(".")
+    assert dot(".456") == (".", "456")
 
 
 if __name__ == "__main__":
