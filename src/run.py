@@ -13,7 +13,7 @@ def nothing(source: str) -> Tuple[None, str]:
     return (None, "bar")
 
 
-def sieve(predicate: Callable[[str], bool]) -> Callable[[PairCallable], PairCallable]:
+def sift(predicate: Callable[[str], bool]) -> Callable[[PairCallable], PairCallable]:
     def f(parser: PairCallable) -> PairCallable:
         def g(source: str) -> Pair:
             def h(result: Pair) -> Pair:
@@ -30,14 +30,14 @@ def literal(value: str) -> Callable[[PairCallable], PairCallable]:
     def f(source: str) -> bool:
         return source == value
 
-    return sieve(f)
+    return sift(f)
 
 
 def member_of(values: str) -> Callable[[PairCallable], PairCallable]:
     def f(source: str) -> bool:
         return source in values
 
-    return sieve(f)
+    return sift(f)
 
 
 def char(value: str) -> PairCallable:
@@ -65,8 +65,8 @@ def test_run() -> None:
 
     assert nothing("bar") == (None, "bar")
 
-    digit = sieve(str.isdigit)(shift)
-    letter = sieve(str.isalpha)(shift)
+    digit = sift(str.isdigit)(shift)
+    letter = sift(str.isalpha)(shift)
     assert digit("456") == ("4", "56")
     assert letter("456") is False
 
