@@ -26,6 +26,20 @@ def sieve(predicate: Callable[[str], bool]) -> Callable[[PairCallable], PairCall
     return f
 
 
+def literal(value: str) -> Callable[[PairCallable], PairCallable]:
+    def f(source: str) -> bool:
+        return source == value
+
+    return sieve(f)
+
+
+def member_of(values: str) -> Callable[[PairCallable], PairCallable]:
+    def f(source: str) -> bool:
+        return source in values
+
+    return sieve(f)
+
+
 def test_run() -> None:
     assert shift("bar") == ("b", "ar")
     assert shift("ar") == ("a", "r")
@@ -34,8 +48,15 @@ def test_run() -> None:
 
     assert nothing("bar") == (None, "bar")
 
-    assert sieve(str.isdigit)(shift)("456") == ("4", "56")
+    digit = sieve(str.isdigit)(shift)
+    assert digit("456") == ("4", "56")
     assert sieve(str.isalpha)(shift)("456") is False
+
+    assert literal(".")(shift)(".456") == (".", "456")
+    assert literal(".")(shift)("45.6") is False
+
+    assert member_of("02468")(digit)("456") == ("4", "56")
+    assert member_of("02468")(digit)("345") is False
 
 
 if __name__ == "__main__":
