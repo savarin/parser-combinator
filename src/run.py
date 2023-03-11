@@ -60,7 +60,7 @@ def fmap(func: Callable[[str], str]) -> Callable[[PairCallable], PairCallable]:
     return f
 
 
-def one_or_more(parser: Callable[[str], Pair]) -> Callable[[str], PairList]:
+def one_or_more(parser: PairCallable) -> PairListCallable:
     def parse(source: str) -> PairList:
         result: List[str] = []
 
@@ -78,7 +78,7 @@ def one_or_more(parser: Callable[[str], Pair]) -> Callable[[str], PairList]:
     return parse
 
 
-def sequence(*parsers: Callable[[str], Pair]) -> Callable[[str], PairList]:
+def sequence(*parsers: PairCallable) -> PairListCallable:
     def parse(source: str) -> PairList:
         result: List[str] = []
 
@@ -92,6 +92,13 @@ def sequence(*parsers: Callable[[str], Pair]) -> Callable[[str], PairList]:
             result.append(value)
 
         return (result, source)
+
+    return parse
+
+
+def either(left: PairListCallable, right: PairListCallable) -> PairListCallable:
+    def parse(source: str) -> PairList:
+        return left(source) or right(source)
 
     return parse
 
@@ -147,6 +154,11 @@ def test_run() -> None:
     right = lambda p1, p2: fmap(lambda p: p[1])(sequence(p1, p2))  # type: ignore
     assert left(letter, digit)("a4") == ("a", "")
     assert right(letter, digit)("a4") == ("4", "")
+
+    alnum = either(letter, digit)  # type: ignore
+    assert alnum("4a") == ("4", "a")
+    assert alnum("a4") == ("a", "4")
+    assert alnum("$4") is False
 
 
 if __name__ == "__main__":
