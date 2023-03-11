@@ -1,7 +1,7 @@
-from typing import Callable, List, Literal, Tuple, Union
+from typing import Callable, List, Literal, Optional, Tuple, Union
 
 
-Pair = Union[Tuple[str, str], Literal[False]]
+Pair = Union[Tuple[Optional[str], str], Literal[False]]
 PairCallable = Callable[[str], Pair]
 
 PairList = Union[Tuple[List[str], str], Literal[False]]
@@ -12,15 +12,19 @@ def shift(source: str) -> Pair:
     return bool(source) and (source[0], source[1:])
 
 
-def nothing(source: str) -> Tuple[None, str]:
-    return (None, "bar")
+def nothing(source: str) -> Pair:
+    return (None, source)
 
 
 def sift(predicate: Callable[[str], bool]) -> Callable[[PairCallable], PairCallable]:
     def f(parser: PairCallable) -> PairCallable:
         def g(source: str) -> Pair:
             def h(result: Pair) -> Pair:
-                return result and predicate(result[0]) and result
+                if result is False:
+                    return result
+
+                assert isinstance(result, tuple) and result[0] is not None
+                return predicate(result[0]) and result
 
             return h(parser(source))
 
@@ -51,7 +55,11 @@ def fmap(func: Callable[[str], str]) -> Callable[[PairCallable], PairCallable]:
     def f(parser: PairCallable) -> PairCallable:
         def g(source: str) -> Pair:
             def h(result: Pair) -> Pair:
-                return result and (func(result[0]), result[1])
+                if result is False:
+                    return result
+
+                assert isinstance(result, tuple) and result[0] is not None
+                return (func(result[0]), result[1])
 
             return h(parser(source))
 
@@ -71,6 +79,7 @@ def one_or_more(parser: PairCallable) -> PairListCallable:
                 break
 
             value, source = pair
+            assert value is not None
             result.append(value)
 
         return bool(result) and (result, source)
@@ -89,6 +98,7 @@ def sequence(*parsers: PairCallable) -> PairListCallable:
                 return False
 
             value, source = pair
+            assert value is not None
             result.append(value)
 
         return (result, source)
@@ -96,11 +106,15 @@ def sequence(*parsers: PairCallable) -> PairListCallable:
     return parse
 
 
-def either(left: PairListCallable, right: PairListCallable) -> PairListCallable:
-    def parse(source: str) -> PairList:
+def either(left: PairCallable, right: PairCallable) -> PairCallable:
+    def parse(source: str) -> Pair:
         return left(source) or right(source)
 
     return parse
+
+
+def maybe(parser: PairCallable) -> PairCallable:
+    return either(parser, nothing)
 
 
 def test_run() -> None:
@@ -159,6 +173,9 @@ def test_run() -> None:
     assert alnum("4a") == ("4", "a")
     assert alnum("a4") == ("a", "4")
     assert alnum("$4") is False
+
+    assert maybe(digit)("456") == ("4", "56")
+    assert maybe(digit)("abc") == (None, "abc")
 
 
 if __name__ == "__main__":
