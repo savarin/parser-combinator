@@ -221,6 +221,11 @@ def test_run() -> None:
     assert key_value("xyz=123;") == (["xyz", 123], "")
     assert key_value("   pi = 3.14  ;") == (["pi", 3.14], "")
 
+    # example: building dictionary
+    key_values = fmap(lambda x: dict(zip(x[::2], x[1::2])))(zero_or_more(key_value))  # type: ignore
+    assert key_values("x=2; y=3.4; z=.789;") == ({"x": 2, "y": 3.4, "z": 0.789}, "")
+    assert key_values("") == ({}, "")
+
 
 if __name__ == "__main__":
     test_run()
