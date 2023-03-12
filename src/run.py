@@ -1,3 +1,6 @@
+"""
+Non-lambda version of https://github.com/dabeaz/blog/blob/main/2023/three-problems.md
+"""
 from typing import Callable, List, Literal, Optional, Tuple, Union
 
 
