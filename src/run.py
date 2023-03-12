@@ -100,7 +100,7 @@ def sequence(*parsers: PairListCallable) -> PairListCallable:
 
             value, source = pair
             assert value is not None
-            result += value
+            result += value if len(value) > 0 else [""]
 
         return (result, source)
 
@@ -189,6 +189,7 @@ def test_run() -> None:
     assert zero_or_more(digit)("456") == (["4", "5", "6"], "")
     assert zero_or_more(digit)("abc") == ([], "abc")
 
+    # example: numbers
     dot = char(".")
     digit = sift(lambda x: all(map(str.isdigit, x)))(shift)
     digits = fmap(lambda x: ["".join(x)])(one_or_more(digit))
@@ -205,6 +206,20 @@ def test_run() -> None:
     assert number(".123") == ([0.123], "")
     assert number("123.") == ([123.0], "")
     assert number(".xyz") is False
+
+    # example: key-value pairs
+    letter = sift(lambda x: all(map(str.isalpha, x)))(shift)
+    letters = fmap(lambda x: ["".join(x)])(one_or_more(letter))
+    whitespace = sift(lambda x: all(map(str.isspace, x)))(shift)
+    whitespaces = fmap(lambda x: ["".join(x)])(zero_or_more(whitespace))
+    token = lambda parser: right(whitespaces, parser)
+    equal = token(char("="))
+    semicolon = token(char(";"))
+    name = token(letters)
+    value = token(number)
+    key_value = sequence(left(name, equal), left(value, semicolon))
+    assert key_value("xyz=123;") == (["xyz", 123], "")
+    assert key_value("   pi = 3.14  ;") == (["pi", 3.14], "")
 
 
 if __name__ == "__main__":
