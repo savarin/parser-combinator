@@ -122,6 +122,10 @@ def zero_or_more(parser: PairListCallable) -> PairListCallable:
     return either(one_or_more(parser), sequence())
 
 
+def choice(parser: PairListCallable, *parsers: PairListCallable) -> PairListCallable:
+    return either(parser, choice(*parsers) if parsers else parser)
+
+
 def test_run() -> None:
     assert shift("bar") == (["b"], "ar")
     assert shift("ar") == (["a"], "r")
@@ -184,6 +188,23 @@ def test_run() -> None:
 
     assert zero_or_more(digit)("456") == (["4", "5", "6"], "")
     assert zero_or_more(digit)("abc") == ([], "abc")
+
+    dot = char(".")
+    digit = sift(lambda x: all(map(str.isdigit, x)))(shift)
+    digits = fmap(lambda x: ["".join(x)])(one_or_more(digit))
+    decdigits = fmap(lambda x: ["".join(x)])(
+        choice(
+            sequence(digits, dot, digits), sequence(digits, dot), sequence(dot, digits)
+        )
+    )
+    integer = fmap(lambda x: list(map(int, x)))(digits)  # type: ignore
+    decimal = fmap(lambda x: list(map(float, x)))(decdigits)  # type: ignore
+    number = choice(decimal, integer)
+    assert number("1234") == ([1234], "")
+    assert number("12.3") == ([12.3], "")
+    assert number(".123") == ([0.123], "")
+    assert number("123.") == ([123.0], "")
+    assert number(".xyz") is False
 
 
 if __name__ == "__main__":
