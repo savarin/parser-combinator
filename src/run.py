@@ -118,6 +118,10 @@ def maybe(parser: PairListCallable) -> PairListCallable:
     return either(parser, nothing)
 
 
+def zero_or_more(parser: PairListCallable) -> PairListCallable:
+    return either(one_or_more(parser), sequence())
+
+
 def test_run() -> None:
     assert shift("bar") == (["b"], "ar")
     assert shift("ar") == (["a"], "r")
@@ -177,6 +181,9 @@ def test_run() -> None:
 
     assert maybe(digit)("456") == (["4"], "56")
     assert maybe(digit)("abc") == (None, "abc")
+
+    assert zero_or_more(digit)("456") == (["4", "5", "6"], "")
+    assert zero_or_more(digit)("abc") == ([], "abc")
 
 
 if __name__ == "__main__":
