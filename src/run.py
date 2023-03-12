@@ -81,7 +81,7 @@ def one_or_more(parser: PairListCallable) -> PairListCallable:
 
             value, source = pair
             assert value is not None
-            result += value
+            result += value or [""]
 
         return bool(result) and (result, source)
 
@@ -100,7 +100,7 @@ def sequence(*parsers: PairListCallable) -> PairListCallable:
 
             value, source = pair
             assert value is not None
-            result += value if len(value) > 0 else [""]
+            result += value or [""]
 
         return (result, source)
 
@@ -225,6 +225,12 @@ def test_run() -> None:
     key_values = fmap(lambda x: dict(zip(x[::2], x[1::2])))(zero_or_more(key_value))  # type: ignore
     assert key_values("x=2; y=3.4; z=.789;") == ({"x": 2, "y": 3.4, "z": 0.789}, "")
     assert key_values("") == ({}, "")
+
+    # example: validating dictionary keys
+    xy_dict = sift(lambda d: d.keys() == {"x", "y"})(key_values)  # type: ignore
+    assert xy_dict("x=4;y=5;") == ({"x": 4, "y": 5}, "")
+    assert xy_dict("y=5;x=4;") == ({"y": 5, "x": 4}, "")
+    assert xy_dict("x=4;y=5;z=6;") is False
 
 
 if __name__ == "__main__":
